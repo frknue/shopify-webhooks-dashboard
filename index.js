@@ -6,10 +6,29 @@ const path = require("path");
 // Get the path to the binary based on the platform
 const getBinaryPath = () => {
   const platform = process.platform;
-  const binName =
-    platform === "win32"
-      ? "shopify-webhooks-dashboard.exe"
-      : "shopify-webhooks-dashboard";
+  const arch = process.arch;
+  let binName = "shopify-webhooks-dashboard";
+
+  switch (platform) {
+    case "win32":
+      binName += ".exe";
+      break;
+    case "darwin":
+      binName += "-darwin";
+      if (arch === "arm64") {
+        binName += "-arm64";
+      }
+      break;
+    case "linux":
+      binName += "-linux";
+      if (arch === "arm64") {
+        binName += "-arm64";
+      }
+      break;
+    default:
+      throw new Error(`Unsupported platform: ${platform}`);
+  }
+
   return path.join(__dirname, "dist", binName);
 };
 

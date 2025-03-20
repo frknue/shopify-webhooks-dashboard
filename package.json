@@ -8,16 +8,21 @@
   },
   "files": [
     "index.js",
-    "dist"
+    "dist",
+    "scripts/download-binary.js",
+    "scripts/build.sh"
   ],
   "scripts": {
-    "postinstall": "node scripts/download-binary.js"
+    "postinstall": "node ./scripts/download-binary.js"
   },
   "keywords": [
     "shopify",
     "webhooks",
     "cli"
   ],
-  "author": "Your Name",
-  "license": "MIT"
+  "author": "frknue",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
 }
