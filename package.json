@@ -1,0 +1,23 @@
+{
+  "name": "shopify-webhooks-dashboard",
+  "version": "1.0.0",
+  "description": "A CLI tool for managing Shopify webhooks",
+  "main": "index.js",
+  "bin": {
+    "shopify-webhooks-dashboard": "./index.js"
+  },
+  "files": [
+    "index.js",
+    "dist"
+  ],
+  "scripts": {
+    "postinstall": "node scripts/download-binary.js"
+  },
+  "keywords": [
+    "shopify",
+    "webhooks",
+    "cli"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+}

@@ -1,3 +1,4 @@
+import { CreateWebhookDialog } from "@/components/CreateWebhookDialog";
 import { Button } from "@/components/ui/button";
 import {
   Pagination,
@@ -145,6 +146,7 @@ function App() {
             <Button variant="outline" onClick={() => fetchWebhooks()}>
               Refresh
             </Button>
+            <CreateWebhookDialog onWebhookCreated={fetchWebhooks} />
             <span className="text-sm text-muted-foreground">
               Showing {webhooks.length} entries
             </span>
