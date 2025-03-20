@@ -47,7 +47,21 @@ func main() {
 
 	// API endpoint: Proxy to Shopify's webhooks API using the stored API key
 	http.HandleFunc("/api/webhooks", func(w http.ResponseWriter, r *http.Request) {
+		// Get pagination parameters from the request
+		limit := r.URL.Query().Get("limit")
+		pageInfo := r.URL.Query().Get("page_info")
+
+		// Construct Shopify URL with pagination parameters
 		shopifyURL := fmt.Sprintf("https://%s/admin/api/%s/webhooks.json", store, apiVersion)
+		if limit != "" {
+			shopifyURL += "?limit=" + limit
+			if pageInfo != "" {
+				shopifyURL += "&page_info=" + pageInfo
+			}
+		} else if pageInfo != "" {
+			shopifyURL += "?page_info=" + pageInfo
+		}
+
 		log.Printf("Making request to Shopify API: %s", shopifyURL)
 
 		req, err := http.NewRequest("GET", shopifyURL, nil)
@@ -78,6 +92,11 @@ func main() {
 
 		// Re-create a new reader from the bytes for forwarding to client
 		responseBody := bytes.NewReader(bodyBytes)
+
+		// Forward Link header for pagination
+		if linkHeader := resp.Header.Get("Link"); linkHeader != "" {
+			w.Header().Set("Link", linkHeader)
+		}
 
 		// Forward the response from Shopify to the client
 		w.Header().Set("Content-Type", "application/json")

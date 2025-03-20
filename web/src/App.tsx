@@ -1,4 +1,11 @@
 import { Button } from "@/components/ui/button";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -12,6 +19,11 @@ interface Webhook {
   // Add other fields as needed
 }
 
+interface PaginationLinks {
+  next?: string;
+  previous?: string;
+}
+
 function App() {
   const [webhooks, setWebhooks] = useState<Webhook[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -19,6 +31,8 @@ function App() {
   const [darkMode, setDarkMode] = useState<boolean>(
     window.matchMedia("(prefers-color-scheme: dark)").matches
   );
+  const [currentPageInfo, setCurrentPageInfo] = useState<string>("");
+  const [paginationLinks, setPaginationLinks] = useState<PaginationLinks>({});
 
   useEffect(() => {
     if (darkMode) {
@@ -28,18 +42,47 @@ function App() {
     }
   }, [darkMode]);
 
-  const fetchWebhooks = () => {
+  const parseLinkHeader = (header: string): PaginationLinks => {
+    const links: PaginationLinks = {};
+    const parts = header.split(", ");
+
+    parts.forEach((part) => {
+      const match = part.match(
+        /<.*[?&]page_info=([^&>]*?)>;\s*rel="(next|previous)"/
+      );
+      if (match) {
+        const [, pageInfo, rel] = match;
+        links[rel as keyof PaginationLinks] = pageInfo;
+      }
+    });
+
+    return links;
+  };
+
+  const fetchWebhooks = (pageInfo?: string) => {
     setLoading(true);
-    fetch("/api/webhooks")
+    const url = pageInfo
+      ? `/api/webhooks?limit=50&page_info=${pageInfo}`
+      : "/api/webhooks?limit=50";
+
+    fetch(url)
       .then((res) => {
+        // Extract and parse Link header
+        const linkHeader = res.headers.get("Link");
+        if (linkHeader) {
+          setPaginationLinks(parseLinkHeader(linkHeader));
+        } else {
+          setPaginationLinks({});
+        }
+
         if (!res.ok) {
           throw new Error(`Error fetching webhooks: ${res.statusText}`);
         }
         return res.json();
       })
       .then((data) => {
-        // Assuming the API returns an object like { webhooks: [...] }
         setWebhooks(data.webhooks || []);
+        setCurrentPageInfo(pageInfo || "");
         setLoading(false);
       })
       .catch((err) => {
@@ -98,9 +141,14 @@ function App() {
       {error && <p className="text-destructive">{error}</p>}
       {!loading && !error && (
         <>
-          <Button variant="outline" className="mb-4" onClick={fetchWebhooks}>
-            Refresh
-          </Button>
+          <div className="flex items-center gap-4 mb-4">
+            <Button variant="outline" onClick={() => fetchWebhooks()}>
+              Refresh
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              Showing {webhooks.length} entries
+            </span>
+          </div>
 
           <div className="rounded-md border dark:border-gray-700 overflow-hidden">
             <table className="w-full text-sm">
@@ -157,6 +205,35 @@ function App() {
                 )}
               </tbody>
             </table>
+          </div>
+
+          <div className="mt-4 flex justify-center">
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() => fetchWebhooks(paginationLinks.previous)}
+                    aria-disabled={!paginationLinks.previous}
+                    className={
+                      !paginationLinks.previous
+                        ? "pointer-events-none opacity-50"
+                        : ""
+                    }
+                  />
+                </PaginationItem>
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() => fetchWebhooks(paginationLinks.next)}
+                    aria-disabled={!paginationLinks.next}
+                    className={
+                      !paginationLinks.next
+                        ? "pointer-events-none opacity-50"
+                        : ""
+                    }
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
           </div>
         </>
       )}

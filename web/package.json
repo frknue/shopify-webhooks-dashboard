@@ -12,12 +12,14 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.0.0",
     "lucide-react": "^0.287.0",
+    "path": "^0.12.7",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
     "tailwind-merge": "^1.14.0"
   },
   "devDependencies": {
     "@shadcn/ui": "^0.0.4",
+    "@types/node": "^22.13.10",
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
     "@vitejs/plugin-react": "^4.0.0",
