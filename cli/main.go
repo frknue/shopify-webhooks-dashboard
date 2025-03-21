@@ -153,13 +153,8 @@ func main() {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	})
 
-	// API endpoint for DELETE requests to delete a specific webhook
+	// API endpoint for DELETE and PUT requests to delete or update a specific webhook
 	http.HandleFunc("/api/webhooks/", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "DELETE" {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-
 		// Extract webhook ID from the URL path
 		// The URL will be like /api/webhooks/4759306
 		path := r.URL.Path
@@ -171,28 +166,79 @@ func main() {
 			return
 		}
 
-		// Construct the Shopify API URL for deleting a webhook
-		shopifyURL := fmt.Sprintf("https://%s/admin/api/%s/webhooks/%s.json", store, apiVersion, webhookID)
+		// Handle DELETE request
+		if r.Method == "DELETE" {
+			// Construct the Shopify API URL for deleting a webhook
+			shopifyURL := fmt.Sprintf("https://%s/admin/api/%s/webhooks/%s.json", store, apiVersion, webhookID)
 
-		req, err := http.NewRequest("DELETE", shopifyURL, nil)
-		if err != nil {
-			log.Printf("Error creating delete request: %v", err)
-			http.Error(w, "Failed to create delete request", http.StatusInternalServerError)
+			req, err := http.NewRequest("DELETE", shopifyURL, nil)
+			if err != nil {
+				log.Printf("Error creating delete request: %v", err)
+				http.Error(w, "Failed to create delete request", http.StatusInternalServerError)
+				return
+			}
+			req.Header.Set("X-Shopify-Access-Token", apiKey)
+
+			client := &http.Client{}
+			resp, err := client.Do(req)
+			if err != nil {
+				log.Printf("Error making delete request to Shopify: %v", err)
+				http.Error(w, "Failed to delete webhook", http.StatusInternalServerError)
+				return
+			}
+			defer resp.Body.Close()
+
+			// Forward the response status from Shopify to the client
+			w.WriteHeader(resp.StatusCode)
 			return
 		}
-		req.Header.Set("X-Shopify-Access-Token", apiKey)
 
-		client := &http.Client{}
-		resp, err := client.Do(req)
-		if err != nil {
-			log.Printf("Error making delete request to Shopify: %v", err)
-			http.Error(w, "Failed to delete webhook", http.StatusInternalServerError)
+		// Handle PUT request to update a webhook
+		if r.Method == "PUT" {
+			body, err := io.ReadAll(r.Body)
+			if err != nil {
+				log.Printf("Error reading request body: %v", err)
+				http.Error(w, "Failed to read request body", http.StatusBadRequest)
+				return
+			}
+			defer r.Body.Close()
+
+			// Construct the Shopify API URL for updating a webhook
+			shopifyURL := fmt.Sprintf("https://%s/admin/api/%s/webhooks/%s.json", store, apiVersion, webhookID)
+
+			req, err := http.NewRequest("PUT", shopifyURL, bytes.NewBuffer(body))
+			if err != nil {
+				log.Printf("Error creating update request: %v", err)
+				http.Error(w, "Failed to create update request", http.StatusInternalServerError)
+				return
+			}
+			req.Header.Set("X-Shopify-Access-Token", apiKey)
+			req.Header.Set("Content-Type", "application/json")
+
+			client := &http.Client{}
+			resp, err := client.Do(req)
+			if err != nil {
+				log.Printf("Error making update request to Shopify: %v", err)
+				http.Error(w, "Failed to update webhook", http.StatusInternalServerError)
+				return
+			}
+			defer resp.Body.Close()
+
+			respBody, err := io.ReadAll(resp.Body)
+			if err != nil {
+				log.Printf("Error reading response body: %v", err)
+				http.Error(w, "Failed to read response", http.StatusInternalServerError)
+				return
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(resp.StatusCode)
+			w.Write(respBody)
 			return
 		}
-		defer resp.Body.Close()
 
-		// Forward the response status from Shopify to the client
-		w.WriteHeader(resp.StatusCode)
+		// Handle unsupported methods
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	})
 
 	// Start HTTP server in a goroutine

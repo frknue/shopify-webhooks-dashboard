@@ -1,4 +1,5 @@
 import { CreateWebhookDialog } from "@/components/CreateWebhookDialog";
+import { EditWebhookDialog } from "@/components/EditWebhookDialog";
 import { Button } from "@/components/ui/button";
 import {
   Pagination,
@@ -33,6 +34,7 @@ function App() {
   );
   const [currentPageInfo, setCurrentPageInfo] = useState<string>("");
   const [paginationLinks, setPaginationLinks] = useState<PaginationLinks>({});
+  const [webhookToEdit, setWebhookToEdit] = useState<Webhook | null>(null);
 
   useEffect(() => {
     if (darkMode) {
@@ -112,6 +114,32 @@ function App() {
     }
   };
 
+  const editWebhook = async (id: number, address: string) => {
+    try {
+      const response = await fetch(`/api/webhooks/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          webhook: {
+            id,
+            address,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to update webhook: ${response.statusText}`);
+      }
+
+      // Refresh the webhooks list after successful update
+      fetchWebhooks(currentPageInfo || undefined);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  };
+
   useEffect(() => {
     fetchWebhooks();
   }, []);
@@ -146,6 +174,16 @@ function App() {
               Refresh
             </Button>
             <CreateWebhookDialog onWebhookCreated={fetchWebhooks} />
+            {webhookToEdit && (
+              <EditWebhookDialog
+                webhook={webhookToEdit}
+                onWebhookEdited={(address) => {
+                  editWebhook(webhookToEdit.id, address);
+                  setWebhookToEdit(null);
+                }}
+                onCancel={() => setWebhookToEdit(null)}
+              />
+            )}
             <span className="text-sm text-muted-foreground">
               Showing {webhooks.length} entries
             </span>
@@ -192,7 +230,14 @@ function App() {
                       <td className="py-3 px-4 text-muted-foreground dark:text-gray-400">
                         {new Date(wh.created_at).toLocaleDateString()}
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-4 flex gap-2">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setWebhookToEdit(wh)}
+                        >
+                          Edit
+                        </Button>
                         <Button
                           variant="destructive"
                           size="sm"
