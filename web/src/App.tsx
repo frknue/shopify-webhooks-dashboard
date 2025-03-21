@@ -17,7 +17,6 @@ interface Webhook {
   created_at: string;
   updated_at: string;
   format: string;
-  // Add other fields as needed
 }
 
 interface PaginationLinks {
