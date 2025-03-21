@@ -49,7 +49,6 @@ func main() {
 	http.HandleFunc("/api/webhooks", func(w http.ResponseWriter, r *http.Request) {
 		// Handle POST request for creating webhooks
 		if r.Method == "POST" {
-			// Read the request body
 			body, err := io.ReadAll(r.Body)
 			if err != nil {
 				log.Printf("Error reading request body: %v", err)
@@ -58,14 +57,8 @@ func main() {
 			}
 			defer r.Body.Close()
 
-			// Log the incoming request body
-			log.Printf("Incoming request body: %s", string(body))
-
-			// Construct Shopify URL
 			shopifyURL := fmt.Sprintf("https://%s/admin/api/%s/webhooks.json", store, apiVersion)
-			log.Printf("Creating webhook: %s", shopifyURL)
 
-			// Create new request to Shopify
 			req, err := http.NewRequest("POST", shopifyURL, bytes.NewBuffer(body))
 			if err != nil {
 				log.Printf("Error creating request: %v", err)
@@ -73,14 +66,9 @@ func main() {
 				return
 			}
 
-			// Set headers
 			req.Header.Set("X-Shopify-Access-Token", apiKey)
 			req.Header.Set("Content-Type", "application/json")
 
-			// Log request headers
-			log.Printf("Request headers: %+v", req.Header)
-
-			// Send request to Shopify
 			client := &http.Client{}
 			resp, err := client.Do(req)
 			if err != nil {
@@ -90,11 +78,6 @@ func main() {
 			}
 			defer resp.Body.Close()
 
-			// Log response status and headers
-			log.Printf("Shopify response status: %s", resp.Status)
-			log.Printf("Shopify response headers: %+v", resp.Header)
-
-			// Read response body
 			respBody, err := io.ReadAll(resp.Body)
 			if err != nil {
 				log.Printf("Error reading response body: %v", err)
@@ -102,10 +85,6 @@ func main() {
 				return
 			}
 
-			// Log response body
-			log.Printf("Shopify response body: %s", string(respBody))
-
-			// Forward the response to the client
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(resp.StatusCode)
 			w.Write(respBody)
@@ -128,8 +107,6 @@ func main() {
 			} else if pageInfo != "" {
 				shopifyURL += "?page_info=" + pageInfo
 			}
-
-			log.Printf("Making request to Shopify API: %s", shopifyURL)
 
 			req, err := http.NewRequest("GET", shopifyURL, nil)
 			if err != nil {
@@ -196,7 +173,6 @@ func main() {
 
 		// Construct the Shopify API URL for deleting a webhook
 		shopifyURL := fmt.Sprintf("https://%s/admin/api/%s/webhooks/%s.json", store, apiVersion, webhookID)
-		log.Printf("Deleting webhook: %s", shopifyURL)
 
 		req, err := http.NewRequest("DELETE", shopifyURL, nil)
 		if err != nil {
@@ -221,14 +197,13 @@ func main() {
 
 	// Start HTTP server in a goroutine
 	go func() {
-		log.Printf("Serving static files at %s...\n", baseURL)
+		log.Printf("Server started at %s\n", baseURL)
 		if err := http.ListenAndServe(":"+port, nil); err != nil {
 			log.Fatalf("Failed to start server: %v", err)
 		}
 	}()
 
-	// Open default browser with the base URL (no sensitive info in the URL)
-	log.Printf("Launching dashboard for %s...\n", store)
+	// Open default browser with the base URL
 	if err := browser.OpenURL(baseURL); err != nil {
 		log.Fatalf("Failed to open browser: %v", err)
 	}
